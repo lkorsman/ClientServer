@@ -10,11 +10,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
+#include <string>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include <pthread.h>
+#include <iostream>
+
+using namespace std;
 
 // Display message if a system call fails
 void error(const char *msg)
@@ -25,34 +29,39 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
-	int sockfd, // Value returned from socket system call
-		portno, // Port number 
-		n;		// Return value for the read and write calls
-	struct sockaddr_in serv_addr;	// Address of the server
-	struct hostent *server;		// Pointer to the hostent struct
-	char buffer[256];	// Buffer for messages to be passed
+	int sockfd, 
+		portno, 
+		n,
+		bytesLeft,
+	 	bytesRecv,
+		bytesSent;
+	long networkInt,
+		 hostInt;
+	struct sockaddr_in serv_addr;
+	struct hostent *server;
 	
-	// Check if host name and port number were provided on command line
+	char buffer[100];
+	char *bp;
+	bool guessedCorrect = false;
+	
+	
+	
 	if (argc < 3) {
 		fprintf(stderr,"usage %s hostname port\n", argv[0]);
 		exit(0);
 	}
+	portno = atoi(argv[2]);
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	
-	portno = atoi(argv[2]); // Cast command line argument to portno integer
-	sockfd = socket(AF_INET, SOCK_STREAM, 0); // Create a new socket
-	
-	// Display message if error opening socket
 	if (sockfd < 0) 
 		error("ERROR opening socket");
 	
-	server = gethostbyname(argv[1]); // Get name of host from command line arg
+	server = gethostbyname(argv[1]);
 	
-	// Display message if server is NULL
 	if (server == NULL) {
 		fprintf(stderr,"ERROR, no such host\n");
 		exit(0);
 	}
-	// Set fields in serv_addr
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
 	bcopy((char *)server->h_addr, 
@@ -60,27 +69,77 @@ int main(int argc, char *argv[])
 		  server->h_length);
 	serv_addr.sin_port = htons(portno);
 	
-	// Display message if error connecting to host
 	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
 		error("ERROR connecting");
 	
-	printf("Please enter the message: ");
-	bzero(buffer,256);
-	fgets(buffer,255,stdin);
-	n = write(sockfd,buffer,strlen(buffer));
 	
-	// Display message if error writing to socket
+	// Get name
+	printf("Please enter name: ");
+	bzero(buffer, 100);
+	fgets(buffer, 99, stdin);
+	
+	// Send name
+	n = write(sockfd,buffer,strlen(buffer));
 	if (n < 0) 
 		error("ERROR writing to socket");
 	
-	bzero(buffer,256);
-	n = read(sockfd,buffer,255);
+	bzero(buffer,100);
 	
-	// Display message if error reading from socket
-	if (n < 0) 
-		error("ERROR reading from socket");
+	while (!guessedCorrect)
+	{
+		// Receive Message
+		bytesLeft = sizeof(long); 
+		bp = (char *) &networkInt;
+		while (bytesLeft) {
+			bytesRecv = recv(sockfd, bp, bytesLeft, 0); 
+			if (bytesRecv <= 0) 
+				exit(-1);
+			bytesLeft = bytesLeft - bytesRecv;
+			bp = bp + bytesRecv;
+		}
+		hostInt = ntohl(networkInt);
+		
+		printf("\nTurn: %ld\n", hostInt);
+		
+		// Send new message
+		printf("Enter a guess: ");
+		cin >> hostInt;
+		networkInt = htonl(hostInt);
+		bytesSent = send(sockfd, (void *) &networkInt,
+						 sizeof(long), 0);
+		if (bytesSent != sizeof(long)) 
+			exit(-1);
+		
+		// Receive Message Message
+		bytesLeft = sizeof(long); 
+		bp = (char *) &networkInt;
+		while (bytesLeft) {
+			bytesRecv = recv(sockfd, bp, bytesLeft, 0); 
+			if (bytesRecv <= 0) 
+				exit(-1);
+			bytesLeft = bytesLeft - bytesRecv;
+			bp = bp + bytesRecv;
+		}
+		hostInt = ntohl(networkInt);
+		
+		printf("Result of guess: %ld\n", hostInt);
+		
+		if (hostInt == 0)
+		{
+			guessedCorrect = true;
+			bzero(buffer,100);
+			n = read(sockfd,buffer,99);
+			if (n < 0) 
+				error("ERROR reading from socket");
+			printf("%s\n",buffer);
+		}
+		
+	}
 	
-	printf("%s\n",buffer);
+	
+	
+	
+	
 	close(sockfd);
 	return 0;
 }

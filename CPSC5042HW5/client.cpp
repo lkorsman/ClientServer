@@ -7,7 +7,6 @@
 //
 
 #include <stdio.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string>
@@ -29,22 +28,21 @@ void error(const char *msg)
 
 int main(int argc, char *argv[])
 {
-	int sockfd, 
-		portno, 
-		n,
-		bytesLeft,
-	 	bytesRecv,
-		bytesSent;
-	long networkInt,
-		 hostInt;
-	struct sockaddr_in serv_addr;
-	struct hostent *server;
-	
-	char buffer[100];
-	char *bp;
-	bool guessedCorrect = false;
-	
-	
+	int sockfd, // File descriptor, stores value of socket system call
+		portno, // Port number for connection
+		n,		// Return value of read/write 
+		bytesLeft,	// bytes left to send to server
+	 	bytesRecv,	// bytes received from server
+		bytesSent,	// bytes sent to server
+		minGuess = 0,	// minimum value of a guess
+		maxGuess = 9999;	// maximum value of a guess
+	long networkInt,		// Integer in network byte order
+		 hostInt;			// Integer in host byte order
+	struct sockaddr_in serv_addr;  // Server address
+	struct hostent *server;		// Host computer struct
+	char buffer[256];			// Store messages to be sent and received
+	char *bp;					// Char pointer for integer messages
+	bool guessedCorrect = false;	// Bool to see if guess is correct
 	
 	if (argc < 3) {
 		fprintf(stderr,"usage %s hostname port\n", argv[0]);
@@ -73,18 +71,20 @@ int main(int argc, char *argv[])
 		error("ERROR connecting");
 	
 	
-	// Get name
+	// Get name of client user
 	printf("Please enter name: ");
-	bzero(buffer, 100);
-	fgets(buffer, 99, stdin);
+	bzero(buffer, 256);
+	std::cin >> buffer;
+	// fgets(buffer, 99, stdin);
 	
-	// Send name
+	// Send name to server
 	n = write(sockfd,buffer,strlen(buffer));
 	if (n < 0) 
 		error("ERROR writing to socket");
 	
-	bzero(buffer,100);
+	bzero(buffer,256);
 	
+	// Keep asking for guesses until correct
 	while (!guessedCorrect)
 	{
 		// Receive Message
@@ -101,16 +101,25 @@ int main(int argc, char *argv[])
 		
 		printf("\nTurn: %ld\n", hostInt);
 		
-		// Send new message
+		// Send new guess
 		printf("Enter a guess: ");
 		cin >> hostInt;
+		
+		// Check if valid guess
+		while (hostInt < minGuess || hostInt > maxGuess)
+		{
+			printf("Invalid guess, enter a guess: ");
+			cin >> hostInt;
+		}
+		
+		// Send guess once valid
 		networkInt = htonl(hostInt);
 		bytesSent = send(sockfd, (void *) &networkInt,
 						 sizeof(long), 0);
 		if (bytesSent != sizeof(long)) 
 			exit(-1);
 		
-		// Receive Message Message
+		// Receive guess response message
 		bytesLeft = sizeof(long); 
 		bp = (char *) &networkInt;
 		while (bytesLeft) {
@@ -124,22 +133,27 @@ int main(int argc, char *argv[])
 		
 		printf("Result of guess: %ld\n", hostInt);
 		
+		// If guessed correct
 		if (hostInt == 0)
 		{
 			guessedCorrect = true;
-			bzero(buffer,100);
-			n = read(sockfd,buffer,99);
+			
+			// Receive congrats message
+			bzero(buffer,256);
+			n = read(sockfd,buffer,255);
 			if (n < 0) 
 				error("ERROR reading from socket");
 			printf("%s\n",buffer);
+			
+			// Receive leader message
+			bzero(buffer,256);
+			n = read(sockfd,buffer,255);
+			if (n < 0) 
+				error("ERROR reading from socket");
+			
+			printf("%s\n", buffer);			
 		}
-		
 	}
-	
-	
-	
-	
-	
 	close(sockfd);
 	return 0;
 }

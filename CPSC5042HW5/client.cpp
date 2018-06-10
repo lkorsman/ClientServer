@@ -1,20 +1,25 @@
-//
-//  client.cpp
-//  CPSC5042HW5
-//
-//  Created by Luke Korsman on 6/6/18.
-//  Copyright © 2018 Luke Korsman. All rights reserved.
-//
+/*
+ * Author: Luke Korsman
+ * Name: client.cpp
+ * Date: June 8, 2018
+ * Version: 1
+ */
+
+/*
+ * This program mimics a client that will talk to a server. It will open a 
+ * connection with the server and then pass messages back and forth. The 
+ * messages will be a guessing game where the server generates a random number
+ * and the client has to guess the number.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
-#include <pthread.h>
 #include <iostream>
 
 using namespace std;
@@ -70,6 +75,9 @@ int main(int argc, char *argv[])
 	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
 		error("ERROR connecting");
 	
+	
+	// Print welcome message
+	printf("\nWelcome to Number Guessing Game!\n");
 	
 	// Get name of client user
 	printf("Please enter name: ");

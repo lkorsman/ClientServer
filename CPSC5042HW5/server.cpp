@@ -157,6 +157,7 @@ void* threadMain(void *args)
 	 	 hostInt;			// Integer in host byte order
 	char *bp;				// Char pointer for integer messages
 	char buffer[100];		// Store messages to be sent and received
+	char msgBuffer[400];	// Buffer to send the leaderboard to client
 	bool guessedCorrect = false;	// Bool to signal guess correct
 	struct Players player1;			// Holds player info
 	std::stringstream ss;			// Helps generate random num
@@ -233,17 +234,16 @@ void* threadMain(void *args)
 			
 			std::string msg = "Congratulations! It took " + std::to_string(turn) 
 								+ " turns to guess the number!";
-			char msgBuffer[256];
 			msg.copy(msgBuffer, msg.length());
 			
 			// Write client congrats message
 			n = write(clientSock, msgBuffer, msg.length());
-			bzero(msgBuffer, 256);
+			bzero(msgBuffer, 400);
 			
 			// Lock leaderboard while updating
 			pthread_mutex_lock(&boardLock);
 			checkLeaderboard(0, player1);
-			pthread_mutex_unlock(&boardLock);
+			
 			
 			// Concatenate leaderboard into single string
 			std::string leader = "\nLeader board:\n";
@@ -257,13 +257,14 @@ void* threadMain(void *args)
 									+ "\n";
 				}
 			}
+			pthread_mutex_unlock(&boardLock);
 			
 			leader.copy(msgBuffer, leader.length());
 			n = write(clientSock, msgBuffer, leader.length());
 			
 			if (n < 0) 
 				error("ERROR writing from socket");
-			bzero(msgBuffer, 256);
+			bzero(msgBuffer, 400);
 		}
 		turn++;
 	}

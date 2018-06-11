@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 		 hostInt;			// Integer in host byte order
 	struct sockaddr_in serv_addr;  // Server address
 	struct hostent *server;		// Host computer struct
-	char buffer[256];			// Store messages to be sent and received
+	char buffer[400];			// Store messages to be sent and received
 	char *bp;					// Char pointer for integer messages
 	bool guessedCorrect = false;	// Bool to see if guess is correct
 	
@@ -81,9 +81,8 @@ int main(int argc, char *argv[])
 	
 	// Get name of client user
 	printf("Please enter name: ");
-	bzero(buffer, 256);
+	bzero(buffer, 400);
 	std::cin >> buffer;
-	// fgets(buffer, 99, stdin);
 	
 	// Send name to server
 	n = write(sockfd,buffer,strlen(buffer));
@@ -147,15 +146,15 @@ int main(int argc, char *argv[])
 			guessedCorrect = true;
 			
 			// Receive congrats message
-			bzero(buffer,256);
-			n = read(sockfd,buffer,255);
+			bzero(buffer,400);
+			n = read(sockfd,buffer,399);
 			if (n < 0) 
 				error("ERROR reading from socket");
 			printf("%s\n",buffer);
 			
 			// Receive leader message
-			bzero(buffer,256);
-			n = read(sockfd,buffer,255);
+			bzero(buffer,400);
+			n = read(sockfd,buffer,399);
 			if (n < 0) 
 				error("ERROR reading from socket");
 			

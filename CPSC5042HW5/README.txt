@@ -22,5 +22,5 @@ Notes:
 - On the execution line of the server, 88888 refers to the port number for the server connection
 - On the execution line of the client, 10.124.72.20 is the IP address for CS1
 - On the execution line of the client, 88888 refers to the same port number as the server
-- When prompted for the player's name, do not include any spaces
+- When prompted for the player's name, do not include any spaces nor numbers
 - The server program will run indefinitely and will need to be stopped by using Ctrl-C

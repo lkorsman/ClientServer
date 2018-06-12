@@ -107,7 +107,10 @@ int main(int argc, char *argv[])
 									(void *) &threadArgs);
 		
 		if (status != 0) 
+		{
 			error("ERROR creating thread");
+		}
+			
 	}
 	close(newsockfd);
 	return 0;
@@ -116,7 +119,6 @@ int main(int argc, char *argv[])
 void error(const char *msg)
 {
 	perror(msg);
-	// pthread_exit(NULL);
 }
 
 long compareIntegers(int first, int second)
@@ -182,7 +184,7 @@ void* threadMain(void *args)
 	
 	// Extract socket file descriptor from argument
 	struct ThreadArgs *threadArgs = (struct ThreadArgs *) args; 
-	clientSock = threadArgs->clientSock;		
+	clientSock = threadArgs->clientSock;			
 	
 	// Read first message (user name)
 	n = read(clientSock,buffer,99);
@@ -190,11 +192,11 @@ void* threadMain(void *args)
 	if (n < 0)
 	{
 		error("ERROR reading from socket");
+		pthread_detach(pthread_self());
 		close(clientSock);
-		pthread_exit(NULL);
+		return NULL;
 	}
 		
-	
 	player1.name = buffer;	// Add player name to current Players struct
 	bzero(buffer, 100);
 	
@@ -209,8 +211,9 @@ void* threadMain(void *args)
 		if (bytesSent != sizeof(long)) 
 		{
 			error("ERROR writing from socket");
+			pthread_detach(pthread_self());
 			close(clientSock);
-			pthread_exit(NULL);
+			return NULL;
 		}
 			
 		
@@ -222,8 +225,9 @@ void* threadMain(void *args)
 			if (bytesRecv <= 0)
 			{
 				error("ERROR reading from socket");
+				pthread_detach(pthread_self());
 				close(clientSock);
-				pthread_exit(NULL);
+				return NULL;
 			}
 				
 			bytesLeft = bytesLeft - bytesRecv;
@@ -242,8 +246,9 @@ void* threadMain(void *args)
 		if (bytesSent != sizeof(long)) 
 		{
 			error("ERROR writing from socket");
+			pthread_detach(pthread_self());
 			close(clientSock);
-			pthread_exit(NULL);
+			return NULL;
 		}
 		
 		// If client guessed correct
@@ -284,8 +289,9 @@ void* threadMain(void *args)
 			if (n < 0) 
 			{
 				error("ERROR writing from socket");
+				pthread_detach(pthread_self());
 				close(clientSock);
-				pthread_exit(NULL);
+				return NULL;
 			}
 				
 			bzero(msgBuffer, 400);

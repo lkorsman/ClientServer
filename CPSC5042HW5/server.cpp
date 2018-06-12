@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
 {
 	int listenSock, // Socket server listens on
 	newsockfd, 		// Socket server transmits on
+	status,			// Status for creating thread
 	portno;			// Port of the connection
 	socklen_t clilen;	// Length of the client address
 	struct sockaddr_in 	serv_addr, // Address of the server
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
 		threadArgs.clientSock = newsockfd;
 		
 		// Create thread for client
-		int status = pthread_create(&threadID, NULL, threadMain,
+		status = pthread_create(&threadID, NULL, threadMain,
 									(void *) &threadArgs);
 		
 		if (status != 0) 
@@ -149,8 +150,10 @@ void* threadMain(void *args)
 	int n,					// Return value of read/write
 		tempRandomNumber,	// Holds a temp random number
 		randomNumber,		// The final random number
-	 	bytesSent,			// bytes sent to server
-	 	bytesRecv,			// bytes received from server
+	 	bytesSent,			// bytes sent 
+	 	bytesRecv,			// bytes received 
+		bytesLeft,			// bytes left to be read
+		clientSock,			// Socket of the client
 		turn = 1;			// Starts client guess turn at 1
 	long sum,				// The difference between user guess and random num
 		 networkInt,		// Integer in network byte order
@@ -162,11 +165,10 @@ void* threadMain(void *args)
 	struct Players player1;			// Holds player info
 	std::stringstream ss;			// Helps generate random num
 	
-	// Create 4 digit random number
-	
 	// Print the random number for debugging and grading
-	printf("Random number:");
+	printf("Random number: ");
 	
+	// Create 4 digit random number
 	srand(time(NULL));
 	for (int i = 0; i < 4; i++)
 	{
@@ -179,9 +181,7 @@ void* threadMain(void *args)
 	
 	// Extract socket file descriptor from argument
 	struct ThreadArgs *threadArgs = (struct ThreadArgs *) args; 
-	int clientSock = threadArgs->clientSock;	
-	
-	
+	clientSock = threadArgs->clientSock;		
 	
 	// Read first message (user name)
 	n = read(clientSock,buffer,99);
@@ -204,7 +204,7 @@ void* threadMain(void *args)
 			exit(-1);
 		
 		// Receive guess 
-		int bytesLeft = sizeof(long);
+		bytesLeft = sizeof(long);
 		bp = (char *) &networkInt;
 		while (bytesLeft) {
 			bytesRecv = recv(clientSock, bp, bytesLeft, 0); 
@@ -232,7 +232,7 @@ void* threadMain(void *args)
 			player1.score = turn;
 			guessedCorrect = true;
 			
-			std::string msg = "Congratulations! It took " + std::to_string(turn) 
+			std::string msg = "\nCongratulations! It took " + std::to_string(turn) 
 								+ " turns to guess the number!";
 			msg.copy(msgBuffer, msg.length());
 			
@@ -243,7 +243,6 @@ void* threadMain(void *args)
 			// Lock leaderboard while updating
 			pthread_mutex_lock(&boardLock);
 			checkLeaderboard(0, player1);
-			
 			
 			// Concatenate leaderboard into single string
 			std::string leader = "\nLeader board:\n";
@@ -257,10 +256,10 @@ void* threadMain(void *args)
 									+ "\n";
 				}
 			}
-			pthread_mutex_unlock(&boardLock);
 			
 			leader.copy(msgBuffer, leader.length());
 			n = write(clientSock, msgBuffer, leader.length());
+			pthread_mutex_unlock(&boardLock);
 			
 			if (n < 0) 
 				error("ERROR writing from socket");

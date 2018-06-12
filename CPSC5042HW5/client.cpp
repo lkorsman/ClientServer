@@ -83,6 +83,14 @@ int main(int argc, char *argv[])
 	printf("Please enter name: ");
 	bzero(buffer, 400);
 	std::cin >> buffer;
+	/*
+	while (strlen(buffer) < 1)
+	{
+		printf("Please re-enter name: ");
+		bzero(buffer, 400);
+		std::cin >> buffer;
+	}
+	 */
 	
 	// Send name to server
 	n = write(sockfd,buffer,strlen(buffer));

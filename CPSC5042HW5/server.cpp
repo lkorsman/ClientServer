@@ -107,15 +107,16 @@ int main(int argc, char *argv[])
 									(void *) &threadArgs);
 		
 		if (status != 0) 
-			exit(-1);
+			error("ERROR creating thread");
 	}
+	close(newsockfd);
 	return 0;
 }
 
 void error(const char *msg)
 {
 	perror(msg);
-	exit(1);
+	// pthread_exit(NULL);
 }
 
 long compareIntegers(int first, int second)
@@ -186,8 +187,13 @@ void* threadMain(void *args)
 	// Read first message (user name)
 	n = read(clientSock,buffer,99);
 	
-	if (n < 0) 
+	if (n < 0)
+	{
 		error("ERROR reading from socket");
+		close(clientSock);
+		pthread_exit(NULL);
+	}
+		
 	
 	player1.name = buffer;	// Add player name to current Players struct
 	bzero(buffer, 100);
@@ -201,15 +207,25 @@ void* threadMain(void *args)
 		bytesSent = send(clientSock, (void *) &networkInt,
 						 sizeof(long), 0);
 		if (bytesSent != sizeof(long)) 
-			exit(-1);
+		{
+			error("ERROR writing from socket");
+			close(clientSock);
+			pthread_exit(NULL);
+		}
+			
 		
 		// Receive guess 
 		bytesLeft = sizeof(long);
 		bp = (char *) &networkInt;
 		while (bytesLeft) {
 			bytesRecv = recv(clientSock, bp, bytesLeft, 0); 
-			if (bytesRecv <= 0) 
-				exit(-1);
+			if (bytesRecv <= 0)
+			{
+				error("ERROR reading from socket");
+				close(clientSock);
+				pthread_exit(NULL);
+			}
+				
 			bytesLeft = bytesLeft - bytesRecv;
 			bp = bp + bytesRecv;
 		}
@@ -224,7 +240,11 @@ void* threadMain(void *args)
 		bytesSent = send(clientSock, (void *) &networkInt,
 						 sizeof(long), 0);
 		if (bytesSent != sizeof(long)) 
-			exit(-1);
+		{
+			error("ERROR writing from socket");
+			close(clientSock);
+			pthread_exit(NULL);
+		}
 		
 		// If client guessed correct
 		if (sum == 0)
@@ -262,7 +282,12 @@ void* threadMain(void *args)
 			pthread_mutex_unlock(&boardLock);
 			
 			if (n < 0) 
+			{
 				error("ERROR writing from socket");
+				close(clientSock);
+				pthread_exit(NULL);
+			}
+				
 			bzero(msgBuffer, 400);
 		}
 		turn++;
